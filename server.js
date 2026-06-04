@@ -628,7 +628,11 @@ app.post('/api/stitch-generate', async (req, res) => {
     
     // Find design object inside outputComponents array
     const designComponent = stitchResultObj.outputComponents && stitchResultObj.outputComponents.find(c => c.design);
-    const screen = designComponent && designComponent.design && designComponent.design.screens && designComponent.design.screens[0];
+    const screens = (designComponent && designComponent.design && designComponent.design.screens) || [];
+    // Search for the primary HTML screen first, then fall back to any screen with htmlCode
+    const screen = screens.find(s => s.htmlCode && s.htmlCode.downloadUrl && s.htmlCode.mimeType === 'text/html') || 
+                   screens.find(s => s.htmlCode && s.htmlCode.downloadUrl) || 
+                   screens[0];
 
     if (!screen || !screen.htmlCode || !screen.htmlCode.downloadUrl) {
       throw new Error('Stitch generated the screen but did not output compile-ready HTML code.');
