@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kamos Sketch to Stitch - 自律型DevOpsデザインエンジン</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>My First Kamos - スケッチからWebページをつくろう！</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600;700&family=Zen+Maru+Gothic:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <!-- Google Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -21,15 +22,14 @@
     <!-- Header Section -->
     <header class="dashboard-header">
         <div class="logo-area">
-            <span class="material-symbols-outlined logo-icon">draw</span>
             <div class="logo-text">
-                <h1>Kamos Sketch to Stitch</h1>
-                <p>自律型UI生成 ＆ クラウドDevOpsパイプライン</p>
+                <h1>My First Kamos</h1>
+                <p>スケッチから かんたんに Webページをつくる クリエイターツール</p>
             </div>
         </div>
         <div class="status-panel">
             <span class="status-indicator"></span>
-            <span class="status-text">クラウドエンジン稼働中</span>
+            <span class="status-text">カモス じゅんび完了</span>
         </div>
     </header>
 
@@ -41,15 +41,15 @@
             <div class="glass-card upload-card" id="drop-zone">
                 <div class="card-header">
                     <span class="material-symbols-outlined">image</span>
-                    <h2>手書きスケッチの入力</h2>
+                    <h2>1. スケッチ画像を アップロードする</h2>
                 </div>
                 <div class="upload-area">
                     <input type="file" id="file-input" accept="image/*" style="display: none;">
                     <div class="upload-placeholder" id="upload-prompt">
                         <span class="material-symbols-outlined placeholder-icon">cloud_upload</span>
-                        <h3>UIスケッチをドラッグ＆ドロップ</h3>
+                        <h3>ここに スケッチの画像を ドラッグ＆ドロップ</h3>
                         <p>PNG, JPG, JPEG 形式に対応</p>
-                        <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">ファイルを選択する</button>
                     </div>
                     <div class="upload-preview-container" id="preview-container" style="display: none;">
                         <img id="sketch-preview" src="" alt="Sketch Preview">
@@ -64,25 +64,35 @@
             <div class="glass-card config-card">
                 <div class="card-header">
                     <span class="material-symbols-outlined">settings</span>
-                    <h2>デザインプリセット</h2>
+                    <h2>2. 制作の 要件・メッセージ</h2>
                 </div>
                 <div class="form-group">
-                    <label for="stitch-project-select">Stitch対象プロジェクト</label>
+                    <label for="stitch-project-select">対象プロジェクト</label>
                     <select id="stitch-project-select">
-                        <option value="__create_dedicated__">✨ Kamos Sketch-to-Stitch (専用プロジェクト)</option>
-                        <option value="__create_new__">➕ 新規プロジェクトを自動作成</option>
+                        <option value="__create_dedicated__">✨ My First Kamos (専用プロジェクト)</option>
+                        <option value="__create_new__">➕ 新しいプロジェクトをつくる</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="guidance-prompt">デザイン指示・追加の要件</label>
-                    <textarea id="guidance-prompt" placeholder="例: 「上部に固定されるモダンなナビゲーションバーを追加して。送信ボタンを横幅いっぱいに広げて。レスポンシブ対応を徹底して。」"></textarea>
+                    <label for="stitch-tone-select">デザインのトーン（見た目のテーマ）</label>
+                    <select id="stitch-tone-select">
+                        <option value="toy_retro">🧸 トイ・レトロ (おもちゃのデザイン)</option>
+                        <option value="pastel_drawing">🎨 パステル (えのぐと画用紙のデザイン)</option>
+                        <option value="future_sf">🚀 フューチャー (みらいの宇宙船のデザイン)</option>
+                        <option value="pop_comic">⚡ ポップ・コミック (まんが風のデザイン)</option>
+                    </select>
+                    <p class="form-help" id="tone-help-text">おもちゃのような赤色や青色、黄色を使った元気なデザインです。ボタンがぷっくりと飛び出して見えます。</p>
+                </div>
+                <div class="form-group">
+                    <label for="guidance-prompt">カモスへの指示・メッセージ</label>
+                    <textarea id="guidance-prompt" placeholder="例: 「おもちゃ屋さんのWebサイト」「ボタンの角を丸くして、青色にして」「かわいい犬の写真を載せて」"></textarea>
                 </div>
             </div>
 
             <!-- Action Button -->
             <button class="btn btn-primary" id="btn-generate">
                 <span class="material-symbols-outlined">rocket_launch</span>
-                Webレイアウトを組み立てる
+                Webページを 組み立てる
             </button>
         </section>
 
@@ -97,7 +107,7 @@
                         </button>
                         <button class="tab-btn" data-tab="kamos-plan" id="tab-btn-kamos" disabled>
                             <span class="material-symbols-outlined">description</span>
-                            エージェント企画
+                            カモスの 企画書
                         </button>
                         <button class="tab-btn" data-tab="sketch" id="tab-btn-sketch" disabled>
                             <span class="material-symbols-outlined">brush</span>
@@ -105,13 +115,13 @@
                         </button>
                         <button class="tab-btn" data-tab="logs" id="tab-btn-logs" disabled>
                             <span class="material-symbols-outlined">terminal</span>
-                            DevOpsログ
+                            動作の記録
                         </button>
                     </div>
                     
                     <button class="btn btn-deploy" id="btn-deploy" disabled>
                         <span class="material-symbols-outlined">cloud_upload</span>
-                        本番環境にデプロイ
+                        🚀 インターネットに 公開する！
                     </button>
                 </div>
 
@@ -120,8 +130,8 @@
                     <div class="tab-pane active" id="pane-preview">
                         <div class="empty-state" id="preview-empty">
                             <span class="material-symbols-outlined empty-icon">web_asset_off</span>
-                            <h3>ページがまだ生成されていません</h3>
-                            <p>手書きのUIスケッチをアップロードし、「Webレイアウトを組み立てる」を押してライブプレビューを生成してください。</p>
+                            <h3>ページが まだ生成されていません</h3>
+                            <p>スケッチの画像をアップロードし、「Webページを組み立てる」を押してください。</p>
                         </div>
                         <iframe id="preview-iframe" src="" style="display: none;"></iframe>
                     </div>
@@ -131,8 +141,8 @@
                         <div class="kamos-plan-content" id="kamos-plan-output">
                             <div class="empty-state">
                                 <span class="material-symbols-outlined empty-icon">description</span>
-                                <h3>企画書がまだ生成されていません</h3>
-                                <p>UIスケッチを生成すると、Kamosによる自律的な企画書がここに出力されます。</p>
+                                <h3>企画書が まだ生成されていません</h3>
+                                <p>UIスケッチを生成すると、カモスによる企画書がここに出力されます。</p>
                             </div>
                         </div>
                     </div>
@@ -147,7 +157,7 @@
                     <!-- Tab: DevOps Logs -->
                     <div class="tab-pane" id="pane-logs">
                         <div class="log-console">
-                            <pre id="log-output">// ここにデプロイログが出力されます...</pre>
+                            <pre id="log-output">// ここに動作の記録が出力されます...</pre>
                         </div>
                     </div>
                 </div>
@@ -159,7 +169,7 @@
                         <span class="meta-val" id="meta-theme">自動検出</span>
                     </div>
                     <div class="meta-item">
-                        <span class="meta-label">AIデザイナーによる解説:</span>
+                        <span class="meta-label">カモスによる解説:</span>
                         <p class="meta-explanation" id="meta-explanation"></p>
                     </div>
                 </div>
@@ -173,13 +183,13 @@
             <div class="loader-left">
                 <div class="orb-loader"></div>
                 <h2 id="loader-title">レイアウト構築中...</h2>
-                <p id="loader-subtitle">レイアウトの座標を処理しています...</p>
+                <p id="loader-subtitle">スケッチのレイアウトを処理しています...</p>
                 <ul class="loader-steps" id="loader-steps">
-                    <li id="step-0"><span class="step-icon"></span>スケッチ画像をアップロード中...</li>
-                    <li id="step-1"><span class="step-icon"></span>AIビジョンによるUI構造と意図の抽出中...</li>
-                    <li id="step-2"><span class="step-icon"></span>Kamosによる自律的なコンテンツ＆UX企画立案中...</li>
-                    <li id="step-3"><span class="step-icon"></span>Stitchによる高精度UIスクリーンの生成中（約1分かかります）...</li>
-                    <li id="step-4"><span class="step-icon"></span>生成コードのダウンロードと結合中...</li>
+                    <li id="step-0"><span class="step-icon"></span>1. スケッチ画像を アップロードしています...</li>
+                    <li id="step-1"><span class="step-icon"></span>2. AIビジョンが スケッチの構造を 解析しています...</li>
+                    <li id="step-2"><span class="step-icon"></span>3. カモスが コンテンツの企画を 立案しています...</li>
+                    <li id="step-3"><span class="step-icon"></span>4. Stitchが 高精度UIコードを 生成しています...</li>
+                    <li id="step-4"><span class="step-icon"></span>5. 生成された HTMLファイルを 準備しています...</li>
                 </ul>
             </div>
             <div class="loader-right">
@@ -187,10 +197,10 @@
                     <span class="terminal-dot red"></span>
                     <span class="terminal-dot yellow"></span>
                     <span class="terminal-dot green"></span>
-                    <span class="terminal-title">DevOps Live Console</span>
+                    <span class="terminal-title">システムの記録</span>
                 </div>
                 <div class="loader-terminal-body">
-                    <pre id="loader-log-output">// パイプラインが始まるとここにリアルタイムログが出力されます...</pre>
+                    <pre id="loader-log-output">// ページの組み立てが始まると、ここに記録が出力されます...</pre>
                 </div>
             </div>
         </div>
@@ -200,8 +210,8 @@
     <div class="modal-overlay" id="success-modal" style="display: none;">
         <div class="modal-container glass-card">
             <span class="material-symbols-outlined success-icon">task_alt</span>
-            <h2>デプロイ完了！</h2>
-            <p>スケッチから生成されたページが、Firebase Hostingの本番環境サーバーへ正常にデプロイされました。</p>
+            <h2>公開完了！</h2>
+            <p>スケッチから生成されたページが、本番サーバーに正常に公開されました。</p>
             
             <div class="deployment-url-box">
                 <span class="material-symbols-outlined">link</span>
@@ -214,7 +224,7 @@
             <div class="modal-actions">
                 <a href="" target="_blank" id="btn-visit-site" class="btn btn-primary">
                     <span class="material-symbols-outlined">open_in_new</span>
-                    公開ページを見る
+                    公開ページを開く
                 </a>
                 <button class="btn btn-secondary" onclick="document.getElementById('success-modal').style.display='none'">閉じる</button>
             </div>

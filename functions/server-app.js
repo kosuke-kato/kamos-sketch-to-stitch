@@ -23,9 +23,9 @@ try {
 }
 
 // Setup Uploads and Previews paths (using os.tmpdir() in Cloud Functions environment)
-const UPLOADS_DIR = process.env.FIREBASE_CONFIG ? os.tmpdir() : path.join(__dirname, 'uploads');
-const PREVIEW_DIR = process.env.FIREBASE_CONFIG ? os.tmpdir() : path.join(__dirname, 'public', 'preview');
-const DIST_DIR = path.join(__dirname, 'dist');
+const UPLOADS_DIR = process.env.FIREBASE_CONFIG ? os.tmpdir() : path.join(__dirname, '..', 'uploads');
+const PREVIEW_DIR = process.env.FIREBASE_CONFIG ? os.tmpdir() : path.join(__dirname, '..', 'public', 'preview');
+const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 if (!process.env.FIREBASE_CONFIG) {
   // Ensure directories exist locally
@@ -45,6 +45,63 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+const Busboy = require('busboy');
+
+// Custom upload middleware to support parsing multipart form data from req.rawBody
+// (which is pre-consumed by Firebase Cloud Functions infrastructure)
+const customUploadMiddleware = (req, res, next) => {
+  if (!req.rawBody) {
+    // Fall back to standard multer if rawBody is not present (local server)
+    return upload.single('sketch')(req, res, next);
+  }
+
+  try {
+    const busboy = Busboy({ headers: req.headers });
+    let fileBuffer = null;
+    let fileName = null;
+    let fileMimeType = null;
+
+    busboy.on('file', (name, file, info) => {
+      const { filename, mimeType } = info;
+      fileName = filename;
+      fileMimeType = mimeType;
+      const chunks = [];
+      file.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+      file.on('end', () => {
+        fileBuffer = Buffer.concat(chunks);
+      });
+    });
+
+    busboy.on('finish', () => {
+      if (fileBuffer) {
+        const ext = path.extname(fileName) || '.png';
+        const finalName = `sketch_${Date.now()}${ext}`;
+        const finalPath = path.join(UPLOADS_DIR, finalName);
+        fs.writeFileSync(finalPath, fileBuffer);
+        req.file = {
+          path: finalPath,
+          originalname: fileName,
+          mimetype: fileMimeType,
+          size: fileBuffer.length
+        };
+      }
+      next();
+    });
+
+    busboy.on('error', (err) => {
+      console.error("[Busboy] error parsing rawBody:", err);
+      next(err);
+    });
+
+    busboy.end(req.rawBody);
+  } catch (err) {
+    console.error("[Busboy] failed to initialize:", err);
+    next(err);
+  }
+};
+
 // Initialize Gemini SDK
 if (!process.env.GEMINI_API_KEY) {
   console.warn("WARNING: GEMINI_API_KEY environment variable is not defined!");
@@ -62,7 +119,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.static(DIST_DIR));
 
 // Read Theme Presets and Base Template
@@ -343,7 +400,7 @@ app.get('/api/stitch-projects', async (req, res) => {
 });
 
 // Endpoint: Upload Sketch
-app.post('/api/upload-sketch', upload.single('sketch'), async (req, res) => {
+app.post('/api/upload-sketch', customUploadMiddleware, async (req, res) => {
   console.log("📥 Received layout upload request...");
   if (!req.file) {
     return res.status(400).json({ error: "No sketch image file uploaded." });
@@ -402,6 +459,7 @@ app.get('/api/preview/:id', async (req, res) => {
   if (!html) {
     return res.status(404).send("Preview screen HTML not found.");
   }
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });
@@ -412,8 +470,39 @@ app.get('/p/:id', async (req, res) => {
   if (!html) {
     return res.status(404).send("Preview screen HTML not found.");
   }
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
+});
+
+// Endpoint: List Design Tones from Firestore
+app.get('/api/list-tones', async (req, res) => {
+  try {
+    if (isFirestoreAvailable) {
+      const tonesRef = admin.firestore().collection('tones');
+      const snapshot = await tonesRef.get();
+      const tones = [];
+      snapshot.forEach(doc => {
+        tones.push(doc.data());
+      });
+      // Sort alphabetically by label or ID
+      tones.sort((a, b) => a.label.localeCompare(b.label));
+      return res.json({ success: true, tones });
+    }
+    // Fallback to static tones if firestore is not available
+    res.json({
+      success: true,
+      tones: [
+        { id: "toy_retro", label: "🧸 トイ・レトロ", description: "おもちゃのような赤色や青色、黄色を使った元気なデザインです。" },
+        { id: "pastel_drawing", label: "🎨 パステル", description: "水彩えのぐやクレヨンのような、やさしい色合いのデザインです。" },
+        { id: "future_sf", label: "🚀 フューチャー", description: "みらいの宇宙船のそうさパネルのようなかっこいいデザインです。" },
+        { id: "pop_comic", label: "⚡ ポップ・コミック", description: "まんがのコマのように太い黒い枠線や、吹き出しマークを使ったデザインです。" }
+      ]
+    });
+  } catch (err) {
+    console.error("Error fetching tones:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch design tones." });
+  }
 });
 
 // Endpoint: Analyze Sketch with Gemini Vision
@@ -505,30 +594,83 @@ User Guidance / Prompt overrides: ${prompt}
 
 // Endpoint: Plan with Kamos & Synthesize Stitch Prompt
 app.post('/api/kamos-plan', async (req, res) => {
-  const { title, layoutStructure, extractedText, prompt = '' } = req.body;
+  const { title, layoutStructure, extractedText, prompt = '', tone = 'toy_retro' } = req.body;
 
   if (!layoutStructure) {
     return res.status(400).json({ error: "layoutStructure is required." });
   }
 
-  try {
-    console.log(`🧠 Orchestrating planning with Kamos...`);
+  // Get tone details from Firestore if available
+  let selectedTone = null;
+  if (isFirestoreAvailable) {
+    try {
+      const toneDoc = await admin.firestore().collection('tones').doc(tone).get();
+      if (toneDoc.exists) {
+        const toneData = toneDoc.data();
+        selectedTone = {
+          name: toneData.label,
+          kamosGuideline: `The design style of this screen is '${toneData.label}'. Write the content strategy, simple copywriting, and messages to fit the feeling of: ${toneData.originalDescription || toneData.description}. Keep the text polite, respectful, and clear for Japanese elementary school kids.`,
+          stitchLayout: `Follow the design style of '${toneData.label}'. Artistic style description: ${toneData.originalDescription || toneData.description}.
+Stitch UI guidelines:
+- If this style specifies neon or dark tones, use a dark-mode theme. If it is bright, watercolor, or pastel, use a clean light-mode theme.
+- Adapt the borders, colors, spacing, and buttons to match this artistic style.
+- Use rounded cards (border-radius: 20px) and friendly buttons.
+- Import and use 'Zen Maru Gothic' and 'Fredoka' from Google Fonts for kid-friendly rounded typography.`
+        };
+      }
+    } catch (dbErr) {
+      console.warn("[Firestore] Failed to fetch tone document, falling back to static mappings:", dbErr.message);
+    }
+  }
 
-    const kamosPrompt = `You are the lead UX designer and content strategist in Kamos.
+  // Fallback to static mappings if Firestore fetch failed or is unavailable
+  if (!selectedTone) {
+    const TONE_MAPPINGS = {
+      toy_retro: {
+        name: "トイ・レトロ (My First Kamos)",
+        kamosGuideline: "Make the content strategy and copywriting fun, engaging, and creator-focused. Use polite but encouraging expressions suitable for a professional-feeling tool for kids.",
+        stitchLayout: "Use a premium, retro-industrial toy aesthetic inspired by 'My First Sony'. The layout must use big, chunky, rounded cards (border-radius: 24px/3xl) and bold dark navy borders (3px solid #1A253C). The background should be a light gray/off-white (#EDF1F7). Use bold solid primary colors (vibrant coral red #FF5757, bright sunny yellow #FFC72C, playful royal blue #3A60F6, and soft grass green) as panels and buttons. All buttons should have thick borders and behave like physical pushable toy buttons (3D feel with an active transform: translateY(4px) depress offset). Import and use 'Zen Maru Gothic' and 'Fredoka' from Google Fonts for a friendly round-gothic font. Text sizes must be large and easy to read."
+      },
+      pastel_drawing: {
+        name: "パステル・お絵かき",
+        kamosGuideline: "Make the copywriting soft, warm, gentle, and welcoming. Use polite and caring expressions that feel like a friendly art studio helper.",
+        stitchLayout: "Use a gentle, warm, hand-drawn pastel drawing aesthetic. The layout should have rounded cards (border-radius: 20px) with thin dashed or sketchy borders (e.g. 2px dashed #8B82B3). Use a very soft, warm background (e.g., warm cream #FCF8F2 or pale lavender/mint). Use a soft candy pastel palette (mint green #A8E6CF, lavender #DED2F9, soft pink #FFD3B6, and pale sky blue) for panels and buttons. All elements should look soft, friendly, and organic. Import and use 'Zen Maru Gothic' from Google Fonts to give a handwritten/doodle feel. Text should be clear and highly readable."
+      },
+      future_sf: {
+        name: "フューチャー・SF",
+        kamosGuideline: "Make the copywriting exciting, clean, and futuristic. Use polite but high-tech, space-explorer terms (e.g. '送信' instead of 'アップロード', 'ミッション', '探査' in a polite way) suitable for a spaceship panel.",
+        stitchLayout: "Use a sleek, clean, space-cadet future cockpit aesthetic. The background should be a deep dark indigo/space-blue (#0B0F19) with semi-transparent dark-blue cards (#151B26 with opacity). The cards should have thin solid neon borders (1.5px solid #00f0ff or #bd00ff) that glow slightly. Use sharp contrasting text colors (bright white and neon green/cyan text). Accessorize with simple futuristic indicators, status bars, and clean grids. Import and use 'Space Mono' and 'Fredoka' from Google Fonts for a clean high-tech UI look."
+      },
+      pop_comic: {
+        name: "ポップ・コミック",
+        kamosGuideline: "Make the copywriting dynamic, energetic, and action-oriented. Use polite yet highly expressive and clear text with dynamic markers (e.g. using exclamation marks, and simple bold headings) to keep children engaged.",
+        stitchLayout: "Use a high-contrast, energetic comic-book panel aesthetic. The layout should use panels with extremely thick, heavy black borders (3.5px solid #000000) and sharp shadow offsets (e.g., box-shadow: 6px 6px 0px #000000). The color palette should feature high-contrast comic colors: comic yellow (#FFE600), vivid orange (#FF6B00), bright blue (#00A3FF), and clean white. Use speech bubble styles for alerts/messages, and badge stickers for labels. Import and use 'Zen Maru Gothic' and 'Fredoka' from Google Fonts for expressive comic-style typography."
+      }
+    };
+    selectedTone = TONE_MAPPINGS[tone] || TONE_MAPPINGS.toy_retro;
+  }
+
+  try {
+    console.log(`🧠 Orchestrating planning with Kamos... Tone: ${selectedTone.name}`);
+
+    const kamosPrompt = `You are the lead UX designer and content strategist in Kamos, specializing in educational, fun, and extremely easy-to-use web products for Japanese elementary school children (小学生向け).
 We are building a web application screen. We have parsed the following layout and elements from a user's UI sketch:
 - Screen Title: ${title}
 - Layout Structure: ${layoutStructure}
 - Extracted Sketch Text: ${extractedText}
 - User Instructions: ${prompt}
 
-Your job is to plan the exact content strategy, copywriting, messaging, and realistic mock data specs to make this screen look complete and premium. Do not use generic placeholders like "Lorem Ipsum".
-Please analyze and define the following details:
-1. **Core Experience Strategy**: The purpose of this screen and how it serves the user.
-2. **Premium Copywriting & Headings**: Specific taglines, headings, descriptions, and button labels to use.
-3. **Data Specifications**: A rich set of realistic mock data rows/items (e.g., table logs, cards, list items) with details. Write the mock data details as plain text or key-value list (e.g., - ID: test-01, Name: User Auth, Type: Security), NOT as raw JSON blocks or JavaScript arrays, as raw code blocks break our parser.
-4. **Enhanced UI Details**: Micro-copy or helper texts that make the interface intuitive.
+The design tone of this screen is "${selectedTone.name}".
+Content Guideline for this tone: ${selectedTone.kamosGuideline}
 
-Please write the descriptions in Japanese, but write the specific copywriting and mock data details in English so they can be easily used in code generation.
+Your job is to plan the content strategy, simple copywriting, polite yet child-friendly messages, and fun mock data specs to make this screen look engaging, playful, and easy to understand.
+Please analyze and define the following details:
+1. **Core Experience Strategy**: The purpose of this screen and how it makes it super easy and fun for kids to use.
+2. **Polite Child-Friendly Copywriting & Headings**: Specific taglines, headings, descriptions, and button labels to use. Write them in clear, polite Japanese (using standard "〜です", "〜ます", "〜してください" form. Avoid baby talk or overly familiar expressions like "〜しよう！" or "〜してね！" since children dislike being talked down to. Keep it respectful, simple, and creator-focused, suited for elementary school kids using a professional design/creation tool. Use simpler Kanji and add furigana/spacing where appropriate).
+3. **Data Specifications**: A set of fun, realistic mock data items (e.g. toy listings, pet records, badge list, game scores) with details. Write the details as a plain text key-value list (e.g. - Item: Red Toy Car, Points: 10), NOT as raw JSON or code arrays.
+4. **Polite Guidance Micro-copy**: Respectful, encouraging, and clear guidance messages in polite form to help kids understand what to do next.
+
+Please write all copywriting, strategies, and mock data details in Japanese so they can be rendered in a kid-friendly way, but keep key data structures clear.
 Do NOT use raw JSON code blocks or backslash escape characters in any of the sections.
 `;
 
@@ -584,9 +726,12 @@ Do NOT use raw JSON code blocks or backslash escape characters in any of the sec
 
     console.log(`✅ Received planning from Kamos. Synthesizing final Stitch prompt...`);
 
-    // Synthesize Stitch Prompt using Gemini 3.5-flash
-    const synthesisSystemPrompt = `You are Kamos Sketch-to-Stitch Prompt Synthesizer.
+    // Synthesize Stitch Prompt using Gemini
+    const synthesisSystemPrompt = `You are Kamos Sketch-to-Stitch Prompt Synthesizer, specialized in creating design instructions for children-oriented interfaces.
 Your task is to combine the original sketch layout structure and the Kamos-generated planning document into a single, highly-detailed text prompt that will be fed into Stitch (an AI text-to-UI screen generator).
+
+Design Tone instructions to apply:
+${selectedTone.stitchLayout}
 
 Inputs:
 - Screen Title: ${title}
@@ -597,10 +742,10 @@ Inputs:
 
 Your output MUST be a detailed, structured prompt in English for Stitch UI generation.
 It must describe:
-1. The overall layout container, structural grids, headers, sidebars, and panels (based on the Sketch Layout).
-2. The specific typography, font imports, and spacing guidelines.
-3. The exact premium copy, headings, and detailed mock data (tables, cards, list items) planned by Kamos. Include the actual texts and data structures from Kamos!
-4. The exact forms, input fields, buttons, and call-to-actions.
+1. The overall layout: Follow the design tone instructions above precisely.
+2. Typography and Fonts: Explicitly import and use the Google Fonts specified in the design tone instructions. Text sizes should be large and easy to read.
+3. The exact child-friendly copy, headings, and detailed mock data (tables, cards, list items) planned by Kamos. Include all Japanese text, hiragana, and katakana from the Kamos Plan!
+4. The exact forms, buttons, and input fields matching the design tone.
 
 Your final output MUST be a valid JSON matching this schema:
 {
@@ -751,15 +896,21 @@ app.post('/api/deploy', async (req, res) => {
   const isDeployedInDb = await markPreviewAsDeployed(id);
   const isServerless = !!process.env.FIREBASE_CONFIG;
   
-  if (isServerless && isDeployedInDb) {
-    const projectId = process.env.FIREBASE_PROJECT_ID || 'kamos-sketch-to-stitch';
-    const deployedUrl = `https://${projectId}.web.app/p/${id}`;
-    
-    return res.json({
-      success: true,
-      output: "[Cloud Deploy] Successfully deployed via Firestore mapping.",
-      url: deployedUrl
-    });
+  if (isServerless) {
+    if (isDeployedInDb) {
+      const projectId = process.env.FIREBASE_PROJECT_ID || 'kamos-sketch-to-stitch';
+      const deployedUrl = `https://${projectId}.web.app/p/${id}`;
+      
+      return res.json({
+        success: true,
+        output: "[Cloud Deploy] Successfully deployed via Firestore mapping.",
+        url: deployedUrl
+      });
+    } else {
+      return res.status(500).json({
+        error: "Firestore database is not initialized. Please ensure Cloud Firestore is enabled and initialized in your Firebase Console."
+      });
+    }
   }
 
   // 2. Local Fallback: physical Firebase CLI deploy
@@ -774,7 +925,7 @@ app.post('/api/deploy', async (req, res) => {
     // Copy dashboard files to dist/
     const filesToCopy = ['index.html', 'app.js', 'style.css'];
     filesToCopy.forEach(file => {
-      const src = path.join(__dirname, 'public', file);
+      const src = path.join(__dirname, '..', 'public', file);
       const dest = path.join(DIST_DIR, file);
       if (fs.existsSync(src)) {
         fs.copyFileSync(src, dest);

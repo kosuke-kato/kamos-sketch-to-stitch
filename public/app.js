@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // API URL Helper to bypass Firebase Hosting 60-second timeout by calling Cloud Run/Functions directly in production
+    function getApiUrl(endpoint) {
+        const isProduction = window.location.hostname.endsWith('web.app') || window.location.hostname.endsWith('firebaseapp.com');
+        const apiBase = isProduction ? 'https://api-4mgowf56dq-uc.a.run.app' : '';
+        return `${apiBase}${endpoint}`;
+    }
+
     // DOM Elements
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -8,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnClearFile = document.getElementById('btn-clear-file');
     
     const stitchProjectSelect = document.getElementById('stitch-project-select');
+    const stitchToneSelect = document.getElementById('stitch-tone-select');
     const guidancePrompt = document.getElementById('guidance-prompt');
     const btnGenerate = document.getElementById('btn-generate');
     const btnDeploy = document.getElementById('btn-deploy');
@@ -116,6 +124,67 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadPrompt.style.display = 'block';
     });
 
+    // Update tone help text dynamically
+    const toneHelpTexts = {
+        toy_retro: "おもちゃのような赤色や青色、黄色を使った元気なデザインです。ボタンがぷっくりと飛び出して見えます。",
+        pastel_drawing: "水彩えのぐやクレヨンのような、やさしい色合いのデザインです。角が丸く、やわらかい雰囲気になります。",
+        future_sf: "みらいの宇宙船のそうさパネルのような、すこし暗い背景に光る文字が並ぶかっこいいデザインです。",
+        pop_comic: "まんがのコマのように太い黒い枠線や、吹き出しマークを使った、にぎやかで動きのあるデザインです。"
+    };
+
+    if (stitchToneSelect) {
+        const toneHelpText = document.getElementById('tone-help-text');
+        stitchToneSelect.addEventListener('change', () => {
+            const selectedVal = stitchToneSelect.value;
+            if (toneHelpText && toneHelpTexts[selectedVal]) {
+                toneHelpText.textContent = toneHelpTexts[selectedVal];
+            }
+        });
+    }
+
+    // Fetch and populate design tones dynamically from Firestore
+    async function loadDesignTones() {
+        if (!stitchToneSelect) return;
+        
+        try {
+            const response = await fetch(getApiUrl('/api/list-tones'));
+            if (!response.ok) throw new Error("Failed to load design tones.");
+            const data = await response.json();
+            
+            if (data.success && data.tones && data.tones.length > 0) {
+                // Clear existing options
+                stitchToneSelect.innerHTML = '';
+                
+                // Clear and rebuild toneHelpTexts
+                for (const key in toneHelpTexts) {
+                    delete toneHelpTexts[key];
+                }
+                
+                data.tones.forEach(tone => {
+                    const option = document.createElement('option');
+                    option.value = tone.id;
+                    option.textContent = tone.label;
+                    stitchToneSelect.appendChild(option);
+                    
+                    toneHelpTexts[tone.id] = tone.description;
+                });
+                
+                // Select first tone by default and set help text
+                const firstTone = data.tones[0];
+                stitchToneSelect.value = firstTone.id;
+                const toneHelpText = document.getElementById('tone-help-text');
+                if (toneHelpText) {
+                    toneHelpText.textContent = firstTone.description;
+                }
+            }
+        } catch (err) {
+            console.error("Error loading design tones:", err);
+            // Fallback to defaults already in HTML if fetch fails
+        }
+    }
+
+    loadDesignTones();
+
     // Tab Switching Logic
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -150,23 +219,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate Layout Action
     btnGenerate.addEventListener('click', async () => {
         if (!selectedFile) {
-            alert('まずスケッチ画像をアップロードしてください！');
+            alert('はじめに、スケッチ画像をアップロードしてください。');
             return;
         }
 
         const projectId = stitchProjectSelect.value;
         if (!projectId) {
-            alert('対象のStitchプロジェクトを選択してください！');
+            alert('対象のStitchプロジェクトを選択してください。');
             return;
         }
 
         // Initialize Logs tab
-        logConsole.textContent = `[DevOps] 🚀 自律型UIデザイン生成パイプラインを初期化しました...\n`;
-        logConsole.textContent += `[DevOps] スケッチ画像をアップロード中...\n`;
+        logConsole.textContent = `[システム] 🚀 ページの組み立て準備を開始しました...\n`;
+        logConsole.textContent += `[システム] スケッチ画像をアップロードしています...\n`;
         logConsole.scrollTop = logConsole.scrollHeight;
 
         // Show Loader Overlay
-        resetLoaderSteps("レイアウト構築中...", "スケッチ画像のアップロードを開始しています...");
+        resetLoaderSteps("Webページを組み立て中...", "スケッチ画像をアップロードしています...");
         loaderOverlay.style.display = 'flex';
 
         try {
@@ -178,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData();
             formData.append('sketch', selectedFile);
 
-            const uploadResponse = await fetch('/api/upload-sketch', {
+            const uploadResponse = await fetch(getApiUrl('/api/upload-sketch'), {
                 method: 'POST',
                 body: formData
             });
@@ -192,10 +261,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const previewId = uploadData.previewId;
             const sketchUrl = uploadData.sketchUrl;
 
-            logConsole.textContent += `[DevOps] ✅ 画像のアップロード完了。プレビューID: ${previewId}\n`;
-            logConsole.textContent += `[DevOps] AI Visionによる手書きスケッチの解析を開始します...\n`;
+            logConsole.textContent += `[システム] ✅ 画像のアップロードが完了しました。\n`;
+            logConsole.textContent += `[システム] AIによる手書きスケッチの解析を開始します...\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
-            loaderSubtitle.textContent = "AI Visionでスケッチの枠組みと構成要素を認識しています...";
+            loaderSubtitle.textContent = "AIがスケッチの枠組みと構成要素を認識しています...";
 
             await new Promise(r => setTimeout(r, 400)); // Smooth transition
             setStepStatus(0, 'done');
@@ -205,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ==========================================
             setStepStatus(1, 'active');
 
-            const geminiResponse = await fetch('/api/gemini-analyze', {
+            const geminiResponse = await fetch(getApiUrl('/api/gemini-analyze'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -222,14 +291,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const geminiData = await geminiResponse.json();
             const { title, layoutStructure, extractedText, explanation } = geminiData;
 
-            logConsole.textContent += `[AI Vision] 👁️ 画像解析に成功しました。\n`;
+            logConsole.textContent += `[AI] 👁️ 画像解析に成功しました。\n`;
             logConsole.textContent += `  - 画面タイトル: ${title}\n`;
             logConsole.textContent += `  - 認識した構造: ${layoutStructure.substring(0, 150)}...\n`;
             logConsole.textContent += `  - 抽出したテキスト: ${extractedText || 'なし'}\n`;
             logConsole.textContent += `  - Visionの解説: ${explanation}\n`;
-            logConsole.textContent += `[DevOps] 🧠 Kamosを起動中。UX戦略とコンテンツコピーの立案をリクエストします...\n`;
+            logConsole.textContent += `[システム] 🧠 カモスを起動中。ページの構成と文章の作成をリクエストしています...\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
-            loaderSubtitle.textContent = "Kamosに接続中。UX戦略とモックデータの定義を行っています...";
+            loaderSubtitle.textContent = "カモスがページの構成と文章を考えています...";
 
             await new Promise(r => setTimeout(r, 400)); // Smooth transition
             setStepStatus(1, 'done');
@@ -239,14 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // ==========================================
             setStepStatus(2, 'active');
 
-            const kamosResponse = await fetch('/api/kamos-plan', {
+            const kamosResponse = await fetch(getApiUrl('/api/kamos-plan'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title,
                     layoutStructure,
                     extractedText,
-                    prompt: guidancePrompt.value
+                    prompt: guidancePrompt.value,
+                    tone: stitchToneSelect ? stitchToneSelect.value : 'toy_retro'
                 })
             });
 
@@ -258,17 +328,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const kamosData = await kamosResponse.json();
             const { stitchPrompt, kamosPlan = '' } = kamosData;
 
-            logConsole.textContent += `[Kamos] 💡 コンテンツ＆UXの企画立案が完了しました。\n`;
+            logConsole.textContent += `[カモス] 💡 ページの構成と文章の決定が完了しました。\n`;
             
             // 企画プレビューをログに表示
             const planStr = typeof kamosPlan === 'string' ? kamosPlan : '';
             const planLines = planStr.split('\n').filter(l => l.trim() !== '');
             const planPreview = planLines.length > 0 ? planLines.slice(0, 5).join('\n    ') : '企画内容はありません。';
             logConsole.textContent += `  [企画案プレビュー]:\n    ${planPreview}\n    ...\n`;
-            logConsole.textContent += `[DevOps] スケッチ構造とKamos企画書のマージ、Stitch用プロンプトの合成完了。\n`;
-            logConsole.textContent += `[DevOps] Stitch MCP (generate_screen_from_text) にUI画面生成をリクエスト中...\n`;
+            logConsole.textContent += `[システム] 構成案とスケッチの情報のマージ、および生成用プロンプトの合成が完了しました。\n`;
+            logConsole.textContent += `[システム] StitchによるUI画面の生成をリクエストしています...\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
-            loaderSubtitle.textContent = "Stitch MCPでコンポーネントの配置とHTML組み立てを実行中（約1分かかります）...";
+            loaderSubtitle.textContent = "Webページのプログラムを組み立てています（約1分かかります）...";
 
             await new Promise(r => setTimeout(r, 400)); // Smooth transition
             setStepStatus(2, 'done');
@@ -278,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ==========================================
             setStepStatus(3, 'active');
 
-            const stitchResponse = await fetch('/api/stitch-generate', {
+            const stitchResponse = await fetch(getApiUrl('/api/stitch-generate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -296,12 +366,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const downloadUrl = stitchData.downloadUrl;
             const theme = stitchData.theme;
 
-            logConsole.textContent += `[Stitch MCP] ✨ 画面HTMLコードの生成に成功しました！\n`;
-            logConsole.textContent += `  - 適用テーマ: ${theme}\n`;
+            logConsole.textContent += `[Stitch] ✨ Webページコードの生成に成功しました！\n`;
+            logConsole.textContent += `  - 適用されたテーマ: ${theme}\n`;
             logConsole.textContent += `  - ダウンロードURL: ${downloadUrl.substring(0, 80)}...\n`;
-            logConsole.textContent += `[DevOps] 生成された静的コードをダウンロードしてコンパイルしています...\n`;
+            logConsole.textContent += `[システム] 生成されたプログラムファイルをダウンロードしています...\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
-            loaderSubtitle.textContent = "生成されたHTMLファイルをダウンロードし、結合しています...";
+            loaderSubtitle.textContent = "プログラムファイルをダウンロードし、準備しています...";
 
             await new Promise(r => setTimeout(r, 400)); // Smooth transition
             setStepStatus(3, 'done');
@@ -311,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ==========================================
             setStepStatus(4, 'active');
 
-            const downloadResponse = await fetch('/api/stitch-download', {
+            const downloadResponse = await fetch(getApiUrl('/api/stitch-download'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -328,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const downloadData = await downloadResponse.json();
             const previewUrl = downloadData.previewUrl;
 
-            logConsole.textContent += `[DevOps] ✅ 静的アセットの結合と保存完了。プレビューURL: ${previewUrl}\n`;
-            logConsole.textContent += `[DevOps] すべてのパイプライン処理が完了しました。デプロイ準備完了。\n`;
+            logConsole.textContent += `[システム] ✅ ファイルの保存が完了しました。プレビューURL: ${previewUrl}\n`;
+            logConsole.textContent += `[システム] すべての組み立て処理が完了しました。公開の準備が整いました。\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
 
             await new Promise(r => setTimeout(r, 400));
@@ -367,10 +437,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
-            logConsole.textContent += `\n❌ [パイプラインエラー] 生成に失敗しました: ${err.message}\n`;
+            logConsole.textContent += `\n❌ [システムエラー] 組み立てに失敗しました: ${err.message}\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
             loaderOverlay.style.display = 'none';
-            alert(`Generation failed: ${err.message}`);
+            alert(`組み立てに失敗しました: ${err.message}`);
         }
     });
 
@@ -382,21 +452,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tab-btn-logs').click();
 
         btnDeploy.disabled = true;
-        logConsole.textContent = `[DevOps] パイプライン展開を初期化中...\n`;
-        logConsole.textContent += `[DevOps] コンパイル済みアセットを対象ディレクトリ 'dist/' にコピー中...\n`;
+        logConsole.textContent = `[システム] 公開処理を準備しています...\n`;
+        logConsole.textContent += `[システム] ファイルを公開用フォルダにコピーしています...\n`;
 
         // Open a secondary deployment loader screen with customized text
-        loaderTitle.textContent = "本番環境にデプロイ中...";
-        loaderSubtitle.textContent = "Firebase CDN にアセットをアップロード中";
+        loaderTitle.textContent = "インターネットに公開中...";
+        loaderSubtitle.textContent = "公開サーバーにファイルを送信しています...";
         
         // Setup simple loader step texts for deployment
-        stepItems[0].textContent = "ファイルを dist/ フォルダにコピー中...";
-        stepItems[1].textContent = "Firebase Hosting との接続を確立中...";
-        stepItems[2].textContent = "静的アセットを CDN にアップロード中...";
-        stepItems[3].textContent = "本番環境の公開URLを確定中...";
+        stepItems[0].textContent = "ファイルを準備しています...";
+        stepItems[1].textContent = "公開サーバーに接続しています...";
+        stepItems[2].textContent = "ファイルをサーバーに送信しています...";
+        stepItems[3].textContent = "公開URLを確認しています...";
         if (stepItems[4]) stepItems[4].style.display = 'none';
         
-        resetLoaderSteps("本番環境にデプロイ中...", "Google Cloud CDN にビルドファイルをアップロードしています");
+        resetLoaderSteps("インターネットに公開中...", "サーバーにファイルを送信しています...");
         loaderOverlay.style.display = 'flex';
 
         try {
@@ -405,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setStepStatus(0, 'done');
             setStepStatus(1, 'active');
 
-            const response = await fetch('/api/deploy', {
+            const response = await fetch(getApiUrl('/api/deploy'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: compiledPreviewId })
@@ -420,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             logConsole.scrollTop = logConsole.scrollHeight;
 
             if (!data.success) {
-                throw new Error("Firebase CLI へのデプロイに失敗しました。詳細は DevOpsログ タブを確認してください。");
+                throw new Error("サーバーへのファイル送信に失敗しました。詳細は「動作の記録」を確認してください。");
             }
 
             await new Promise(r => setTimeout(r, 800));
@@ -436,24 +506,24 @@ document.addEventListener('DOMContentLoaded', () => {
             btnVisitSite.href = data.url;
             successModal.style.display = 'flex';
 
-            logConsole.textContent += `\n[DevOps] デプロイに成功しました！\n公開URL: ${data.url}\n`;
+            logConsole.textContent += `\n[システム] 公開に成功しました！\nURL: ${data.url}\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
 
         } catch (err) {
             console.error(err);
             loaderOverlay.style.display = 'none';
             btnDeploy.disabled = false;
-            logConsole.textContent += `\n❌ [DevOps エラー] デプロイに失敗しました: ${err.message}\n`;
+            logConsole.textContent += `\n❌ [システムエラー] 公開に失敗しました: ${err.message}\n`;
             logConsole.scrollTop = logConsole.scrollHeight;
-            alert(`デプロイに失敗しました: ${err.message}`);
+            alert(`公開に失敗しました: ${err.message}`);
         } finally {
             // Restore default text on loader steps for next generation
-            stepItems[0].textContent = "スケッチ画像をアップロード中...";
-            stepItems[1].textContent = "AIビジョンによるUI構造と意図の抽出中...";
-            stepItems[2].textContent = "Kamosによる自律的なコンテンツ＆UX企画立案中...";
-            stepItems[3].textContent = "Stitchによる高精度UIスクリーンの生成中（約1分かかります）...";
+            stepItems[0].textContent = "スケッチ画像をアップロードしています...";
+            stepItems[1].textContent = "AIがスケッチの構造と意図を分析しています...";
+            stepItems[2].textContent = "カモスがページの構成と文章を考えています...";
+            stepItems[3].textContent = "StitchがWebページのプログラムを作成しています...";
             if (stepItems[4]) {
-                stepItems[4].textContent = "生成コードのダウンロードと結合中...";
+                stepItems[4].textContent = "作成したプログラムファイルを準備しています...";
                 stepItems[4].style.display = 'flex';
             }
         }
