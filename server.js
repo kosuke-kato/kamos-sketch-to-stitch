@@ -384,7 +384,7 @@ app.post('/api/gemini-analyze', async (req, res) => {
   else if (ext === '.webp') mimeType = 'image/webp';
 
   try {
-    console.log(`👁️ Processing sketch using Gemini Vision API (gemini-3-flash-preview)...`);
+    console.log(`👁️ Processing sketch using Gemini Vision API (gemini-3.5-flash)...`);
     const imageBase64 = fs.readFileSync(imagePath).toString('base64');
 
     const systemPrompt = `You are Kamos Sketch-to-Stitch Vision Analyzer, an elite AI frontend designer and UI/UX expert.
@@ -409,7 +409,7 @@ User Guidance / Prompt overrides: ${prompt}
 `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       contents: [
         {
           role: 'user',
@@ -554,7 +554,7 @@ Your final output MUST be a valid JSON matching this schema:
 `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       contents: [
         { text: synthesisSystemPrompt }
       ],
