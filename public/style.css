@@ -558,9 +558,9 @@ iframe {
 /* Log Console Styles */
 .log-console {
     padding: 24px;
-    background: #000000;
+    background: #090D16;
     font-family: var(--font-mono);
-    color: #a9b1d6; /* Tokyo Night style console text */
+    color: #FFFFFF; /* High contrast white text for systems log */
     height: 100%;
     font-size: 13px;
     line-height: 1.6;
@@ -626,7 +626,8 @@ iframe {
 .loader-container {
     width: 420px;
     text-align: center;
-    background: rgba(11, 19, 38, 0.8) !important;
+    background: #FFFFFF !important; /* White Memphis card background */
+    color: var(--text-main) !important;
 }
 
 /* Split Loader Layout */
@@ -648,24 +649,24 @@ iframe {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 3px solid var(--border-color); /* Memphis thick border */
 }
 
 .loader-right {
     flex: 1.2;
-    background: rgba(3, 7, 18, 0.95);
+    background: #090D16; /* Pure dark slate for developer terminal view */
     display: flex;
     flex-direction: column;
     text-align: left;
 }
 
 .loader-terminal-header {
-    background: rgba(17, 24, 39, 0.8);
+    background: #111827; /* Solid dark background */
     padding: 10px 16px;
     display: flex;
     align-items: center;
     gap: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 3px solid var(--border-color); /* Thick border */
 }
 
 .terminal-dot {
@@ -682,7 +683,7 @@ iframe {
 .loader-terminal-header .terminal-title {
     font-size: 11px;
     font-family: 'Fira Code', monospace, Courier;
-    color: var(--text-muted);
+    color: #F8FAFC; /* Crisp white title */
     margin-left: 8px;
     letter-spacing: 0.5px;
 }
@@ -694,7 +695,7 @@ iframe {
     font-family: 'Fira Code', monospace, Courier;
     font-size: 12px;
     line-height: 1.5;
-    color: #38bdf8;
+    color: #38bdf8; /* Readable cyan text */
 }
 
 .loader-terminal-body pre {
@@ -724,12 +725,13 @@ iframe {
 .loader-container h2 {
     font-size: 20px;
     font-weight: 800;
+    color: var(--text-main);
     margin-bottom: 6px;
 }
 
 .loader-container p {
     font-size: 13px;
-    color: var(--text-muted);
+    color: #475569; /* High-contrast dark gray on white background */
     margin-bottom: 24px;
 }
 
@@ -742,7 +744,7 @@ iframe {
 .loader-steps li {
     font-size: 14px;
     margin-bottom: 12px;
-    color: var(--text-muted);
+    color: #64748B; /* Legible gray */
     display: flex;
     align-items: center;
     gap: 10px;
@@ -750,25 +752,30 @@ iframe {
 }
 
 .loader-steps li.active {
-    color: var(--text-main);
-    font-weight: 600;
+    color: var(--secondary-color); /* Playful blue active color */
+    font-weight: 700;
 }
 
 .loader-steps li.active .step-icon {
-    border-color: var(--primary-color);
+    border-color: var(--secondary-color);
     border-top-color: transparent;
     animation: step-spin 1s infinite linear;
 }
 
 .loader-steps li.done {
-    color: var(--primary-color);
+    color: var(--accent-green); /* Green color for completed steps */
+    font-weight: 700;
+}
+
+.loader-steps li.done .step-icon {
+    border-color: var(--accent-green);
 }
 
 .loader-steps li.done .step-icon::after {
     content: "✓";
     font-size: 12px;
     font-weight: bold;
-    color: var(--primary-color);
+    color: var(--accent-green);
 }
 
 .step-icon {
