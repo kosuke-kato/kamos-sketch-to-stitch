@@ -19,6 +19,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewIframe = document.getElementById('preview-iframe');
     const deployedSketchView = document.getElementById('deployed-sketch-view');
     const logConsole = document.getElementById('log-output');
+    const loaderLogConsole = document.getElementById('loader-log-output');
+    
+    // Redirect textContent changes to loader log console in real-time
+    if (logConsole && loaderLogConsole) {
+        const originalDescriptor = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+        Object.defineProperty(logConsole, 'textContent', {
+            get() {
+                return originalDescriptor.get.call(this);
+            },
+            set(value) {
+                originalDescriptor.set.call(this, value);
+                originalDescriptor.set.call(loaderLogConsole, value);
+                loaderLogConsole.scrollTop = loaderLogConsole.scrollHeight;
+                this.scrollTop = this.scrollHeight;
+            }
+        });
+    }
+
     
     const metaFooter = document.getElementById('meta-footer');
     const metaTheme = document.getElementById('meta-theme');
