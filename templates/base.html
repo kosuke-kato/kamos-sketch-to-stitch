@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}}</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    {{FONT_IMPORT}}
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ambient-bg: {{AMBIENT_BG}};
+            --primary-color: {{PRIMARY_COLOR}};
+            --primary-container: {{PRIMARY_CONTAINER}};
+            --surface: {{SURFACE}};
+            --on-surface: {{ON_SURFACE}};
+            --on-surface-variant: {{ON_SURFACE_VARIANT}};
+            --font-family: {{FONT_FAMILY}};
+            --border-radius: {{BORDER_RADIUS}};
+            --border-width: {{BORDER_WIDTH}};
+            --border-color: {{BORDER_COLOR}};
+            --box-shadow: {{BOX_SHADOW}};
+            --glass-blur: {{GLASS_BLUR}};
+            --transition-speed: {{TRANSITION_SPEED}};
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--ambient-bg);
+            color: var(--on-surface);
+            font-family: var(--font-family), 'Outfit', 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            transition: background var(--transition-speed);
+        }
+
+        /* Neural Fluid Background Orbs */
+        .neural-fluid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            filter: blur(80px);
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .fluid-orb {
+            position: absolute;
+            border-radius: 50%;
+        }
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: var(--primary-color);
+            top: -100px;
+            left: -100px;
+            opacity: 0.6;
+            animation: move-1 {{BLOB_DURATION}} infinite alternate ease-in-out;
+        }
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: var(--on-surface-variant);
+            bottom: -50px;
+            right: -50px;
+            opacity: 0.4;
+            animation: move-2 {{BLOB_DURATION}} infinite alternate ease-in-out;
+        }
+
+        @keyframes move-1 {
+            from { transform: translate(-10%, -10%); }
+            to { transform: translate(20%, 15%); }
+        }
+        @keyframes move-2 {
+            from { transform: translate(10%, 10%); }
+            to { transform: translate(-15%, -20%); }
+        }
+
+        /* Premium Glass Card Style */
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: var(--border-width) solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 24px;
+            transition: all var(--transition-speed);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,0.18);
+        }
+
+        /* Input / Form Fields */
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-color);
+            border-radius: calc(var(--border-radius) / 2);
+            color: var(--on-surface);
+            font-family: inherit;
+            margin-bottom: 16px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-color);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 0 3px var(--primary-container);
+        }
+
+        /* Buttons */
+        button, .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: var(--ambient-bg);
+            font-weight: 700;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        button:hover, .btn:hover {
+            opacity: 0.9;
+            transform: scale(0.99);
+        }
+
+        /* Brutalist Styles (If theme demands it) */
+        {{BRUTALIST_CSS}}
+    </style>
+</head>
+<body>
+    <div class="neural-fluid" style="{{BLOB_STYLE}}">
+        <div class="fluid-orb orb-1"></div>
+        <div class="fluid-orb orb-2"></div>
+    </div>
+    
+    {{CONTENT}}
+</body>
+</html>

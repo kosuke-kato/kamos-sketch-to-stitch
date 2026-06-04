@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kamos Sketch to Stitch - 自律型DevOpsデザインエンジン</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Google Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Animated Orbs -->
+    <div class="neural-fluid">
+        <div class="fluid-orb orb-1"></div>
+        <div class="fluid-orb orb-2"></div>
+        <div class="fluid-orb orb-3"></div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="dashboard-header">
+        <div class="logo-area">
+            <span class="material-symbols-outlined logo-icon">draw</span>
+            <div class="logo-text">
+                <h1>Kamos Sketch to Stitch</h1>
+                <p>自律型UI生成 ＆ クラウドDevOpsパイプライン</p>
+            </div>
+        </div>
+        <div class="status-panel">
+            <span class="status-indicator"></span>
+            <span class="status-text">クラウドエンジン稼働中</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="dashboard-workspace">
+        <!-- Left Side: Inputs -->
+        <section class="control-panel">
+            <!-- Sketch Upload Card -->
+            <div class="glass-card upload-card" id="drop-zone">
+                <div class="card-header">
+                    <span class="material-symbols-outlined">image</span>
+                    <h2>手書きスケッチの入力</h2>
+                </div>
+                <div class="upload-area">
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <div class="upload-placeholder" id="upload-prompt">
+                        <span class="material-symbols-outlined placeholder-icon">cloud_upload</span>
+                        <h3>UIスケッチをドラッグ＆ドロップ</h3>
+                        <p>PNG, JPG, JPEG 形式に対応</p>
+                        <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
+                    </div>
+                    <div class="upload-preview-container" id="preview-container" style="display: none;">
+                        <img id="sketch-preview" src="" alt="Sketch Preview">
+                        <button class="btn-clear" id="btn-clear-file">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurations Card -->
+            <div class="glass-card config-card">
+                <div class="card-header">
+                    <span class="material-symbols-outlined">settings</span>
+                    <h2>デザインプリセット</h2>
+                </div>
+                <div class="form-group">
+                    <label for="stitch-project-select">Stitch対象プロジェクト</label>
+                    <select id="stitch-project-select">
+                        <option value="__create_dedicated__">✨ Kamos Sketch-to-Stitch (専用プロジェクト)</option>
+                        <option value="__create_new__">➕ 新規プロジェクトを自動作成</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="guidance-prompt">デザイン指示・追加の要件</label>
+                    <textarea id="guidance-prompt" placeholder="例: 「上部に固定されるモダンなナビゲーションバーを追加して。送信ボタンを横幅いっぱいに広げて。レスポンシブ対応を徹底して。」"></textarea>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button class="btn btn-primary" id="btn-generate">
+                <span class="material-symbols-outlined">rocket_launch</span>
+                Webレイアウトを組み立てる
+            </button>
+        </section>
+
+        <!-- Right Side: Sandbox Preview -->
+        <section class="preview-panel">
+            <div class="glass-card sandbox-card">
+                <div class="sandbox-header">
+                    <div class="tab-selectors">
+                        <button class="tab-btn active" data-tab="preview">
+                            <span class="material-symbols-outlined">web</span>
+                            ページプレビュー
+                        </button>
+                        <button class="tab-btn" data-tab="kamos-plan" id="tab-btn-kamos" disabled>
+                            <span class="material-symbols-outlined">description</span>
+                            エージェント企画
+                        </button>
+                        <button class="tab-btn" data-tab="sketch" id="tab-btn-sketch" disabled>
+                            <span class="material-symbols-outlined">brush</span>
+                            元のスケッチ
+                        </button>
+                        <button class="tab-btn" data-tab="logs" id="tab-btn-logs" disabled>
+                            <span class="material-symbols-outlined">terminal</span>
+                            DevOpsログ
+                        </button>
+                    </div>
+                    
+                    <button class="btn btn-deploy" id="btn-deploy" disabled>
+                        <span class="material-symbols-outlined">cloud_upload</span>
+                        本番環境にデプロイ
+                    </button>
+                </div>
+
+                <div class="sandbox-content">
+                    <!-- Tab: Live Preview -->
+                    <div class="tab-pane active" id="pane-preview">
+                        <div class="empty-state" id="preview-empty">
+                            <span class="material-symbols-outlined empty-icon">web_asset_off</span>
+                            <h3>ページがまだ生成されていません</h3>
+                            <p>手書きのUIスケッチをアップロードし、「Webレイアウトを組み立てる」を押してライブプレビューを生成してください。</p>
+                        </div>
+                        <iframe id="preview-iframe" src="" style="display: none;"></iframe>
+                    </div>
+
+                    <!-- Tab: Kamos Plan -->
+                    <div class="tab-pane" id="pane-kamos-plan">
+                        <div class="kamos-plan-content" id="kamos-plan-output">
+                            <div class="empty-state">
+                                <span class="material-symbols-outlined empty-icon">description</span>
+                                <h3>企画書がまだ生成されていません</h3>
+                                <p>UIスケッチを生成すると、Kamosによる自律的な企画書がここに出力されます。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Original Sketch -->
+                    <div class="tab-pane" id="pane-sketch">
+                        <div class="sketch-comparison">
+                            <img id="deployed-sketch-view" src="" alt="Sketch file">
+                        </div>
+                    </div>
+
+                    <!-- Tab: DevOps Logs -->
+                    <div class="tab-pane" id="pane-logs">
+                        <div class="log-console">
+                            <pre id="log-output">// ここにデプロイログが出力されます...</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info banner once generated -->
+                <div class="design-meta-footer" id="meta-footer" style="display: none;">
+                    <div class="meta-item">
+                        <span class="meta-label">適用されたテーマ:</span>
+                        <span class="meta-val" id="meta-theme">自動検出</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">AIデザイナーによる解説:</span>
+                        <p class="meta-explanation" id="meta-explanation"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Glassmorphic Loading Screen Overlay -->
+    <div class="loader-overlay" id="loader-overlay" style="display: none;">
+        <div class="loader-container glass-card">
+            <div class="orb-loader"></div>
+            <h2 id="loader-title">レイアウト構築中...</h2>
+            <p id="loader-subtitle">レイアウトの座標を処理しています...</p>
+            <ul class="loader-steps" id="loader-steps">
+                <li id="step-0"><span class="step-icon"></span>スケッチ画像をアップロード中...</li>
+                <li id="step-1"><span class="step-icon"></span>AIビジョンによるUI構造と意図の抽出中...</li>
+                <li id="step-2"><span class="step-icon"></span>Kamosによる自律的なコンテンツ＆UX企画立案中...</li>
+                <li id="step-3"><span class="step-icon"></span>Stitchによる高精度UIスクリーンの生成中（約1分かかります）...</li>
+                <li id="step-4"><span class="step-icon"></span>生成コードのダウンロードと結合中...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Success Modal Overlay -->
+    <div class="modal-overlay" id="success-modal" style="display: none;">
+        <div class="modal-container glass-card">
+            <span class="material-symbols-outlined success-icon">task_alt</span>
+            <h2>デプロイ完了！</h2>
+            <p>スケッチから生成されたページが、Firebase Hostingの本番環境サーバーへ正常にデプロイされました。</p>
+            
+            <div class="deployment-url-box">
+                <span class="material-symbols-outlined">link</span>
+                <input type="text" id="deployed-url-input" readonly value="">
+                <button class="btn btn-secondary btn-icon" id="btn-copy-url">
+                    <span class="material-symbols-outlined">content_copy</span>
+                </button>
+            </div>
+
+            <div class="modal-actions">
+                <a href="" target="_blank" id="btn-visit-site" class="btn btn-primary">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                    公開ページを見る
+                </a>
+                <button class="btn btn-secondary" onclick="document.getElementById('success-modal').style.display='none'">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
