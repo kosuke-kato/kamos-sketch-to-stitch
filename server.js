@@ -470,10 +470,11 @@ Your job is to plan the exact content strategy, copywriting, messaging, and real
 Please analyze and define the following details:
 1. **Core Experience Strategy**: The purpose of this screen and how it serves the user.
 2. **Premium Copywriting & Headings**: Specific taglines, headings, descriptions, and button labels to use.
-3. **Data Specifications**: A rich set of realistic mock data rows/items (e.g., table logs, cards, list items) with details.
+3. **Data Specifications**: A rich set of realistic mock data rows/items (e.g., table logs, cards, list items) with details. Write the mock data details as plain text or key-value list (e.g., - ID: test-01, Name: User Auth, Type: Security), NOT as raw JSON blocks or JavaScript arrays, as raw code blocks break our parser.
 4. **Enhanced UI Details**: Micro-copy or helper texts that make the interface intuitive.
 
 Please write the descriptions in Japanese, but write the specific copywriting and mock data details in English so they can be easily used in code generation.
+Do NOT use raw JSON code blocks or backslash escape characters in any of the sections.
 `;
 
     // Call Kamos (using ask_kamos tool via HTTPS Callable)
