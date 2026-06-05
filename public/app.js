@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sketchPreview = document.getElementById('sketch-preview');
     const btnClearFile = document.getElementById('btn-clear-file');
     
-    const stitchProjectSelect = document.getElementById('stitch-project-select');
     const stitchToneSelect = document.getElementById('stitch-tone-select');
     const guidancePrompt = document.getElementById('guidance-prompt');
     const btnGenerate = document.getElementById('btn-generate');
@@ -223,11 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const projectId = stitchProjectSelect.value;
-        if (!projectId) {
-            alert('対象のStitchプロジェクトを選択してください。');
-            return;
-        }
+        const projectId = '__create_new__';
 
         // Initialize Logs tab
         logConsole.textContent = `[システム] 🚀 ページの組み立て準備を開始しました...\n`;

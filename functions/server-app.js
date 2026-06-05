@@ -353,7 +353,7 @@ async function getOrCreateDedicatedProject(title) {
   }
 
   const createdObj = JSON.parse(createResponse.result.content[0].text);
-  const newProjId = createdObj.project.name.split('/').pop();
+  const newProjId = (createdObj.name || (createdObj.project && createdObj.project.name) || '').split('/').pop();
   console.log(`[Stitch] Successfully created project. ID: ${newProjId}`);
   return newProjId;
 }
@@ -796,13 +796,9 @@ app.post('/api/stitch-generate', async (req, res) => {
   let resolvedProjectId = projectId;
 
   try {
-    // Resolve dynamic project IDs
-    if (resolvedProjectId === "__create_dedicated__") {
-      resolvedProjectId = await getOrCreateDedicatedProject("Kamos Sketch-to-Stitch");
-    } else if (resolvedProjectId === "__create_new__") {
-      const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-      resolvedProjectId = await getOrCreateDedicatedProject(`Sketch to Stitch ${timestamp}`);
-    }
+    // 常に新しいプロジェクトを都度作成する（固定プロジェクトは同期データ肥大化による遅延やコストを防ぐため廃止）
+    const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    resolvedProjectId = await getOrCreateDedicatedProject(`Sketch to Stitch ${timestamp}`);
 
     console.log(`🚀 Dispatching generation prompt to Stitch (Project: ${resolvedProjectId})...`);
     const stitchResponse = await callStitch('tools/call', {
