@@ -591,8 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return htmlLines.join('\n');
     }
 
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function parseInlineMarkdown(text) {
-        return text
+        return escapeHtml(text)
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/`([^`]+)`/g, '<code>$1</code>');
     }
